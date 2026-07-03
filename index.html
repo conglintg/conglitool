@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>iCloud Tool</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #141416; color: #fff; padding: 10px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 480px; background-color: #202024; padding: 15px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #323238; padding-bottom: 8px; margin-bottom: 12px; }
+        .title { font-size: 16px; font-weight: bold; color: #f1c40f; }
+        .btn-config { background: #3a3a40; border: none; color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+        .setup-box { background-color: #141416; padding: 12px; border-radius: 8px; border: 1px dashed #444; margin-bottom: 12px; }
+        .input-style, .select-style, .textarea-style { width: 100%; background-color: #2c2c32; border: 1px solid #444; border-radius: 6px; color: #fff; padding: 10px; margin-top: 5px; margin-bottom: 10px; font-size: 13px; }
+        .textarea-style { height: 90px; resize: none; }
+        
+        /* THANH ĐIỀU HƯỚNG TAB */
+        .tab-navigation { display: flex; gap: 5px; margin-bottom: 15px; background: #141416; padding: 4px; border-radius: 8px; }
+        .tab-btn { flex: 1; background: transparent; border: none; color: #aaa; padding: 10px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+        .tab-btn.active { background-color: #3a3a40; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        .tab-btn:focus { outline: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* LUỒNG 1: OTP REALTIME */
+        .section-otp { background-color: #2a2415; border: 1px solid #e67e22; padding: 12px; border-radius: 8px; }
+        .section-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #e67e22; text-transform: uppercase; }
+        .farm-copy-row { display: grid; grid-template-columns: 1fr 75px; gap: 5px; margin-bottom: 8px; background: #1a1a1e; padding: 6px; border-radius: 6px; align-items: center; }
+        .farm-text { font-size: 12px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 5px; }
+        .btn-copy { background-color: #444; border: none; color: #00ffcc; padding: 5px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .btn-copy:active { background-color: #00ffcc; color: #000; }
+        .btn-otp { width: 100%; background-color: #e67e22; border: none; color: #fff; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 5px; }
+        
+        .manual-list-container { margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #444; border-radius: 6px; background: #141416; padding: 5px; }
+        .manual-row { display: grid; grid-template-columns: 1fr 65px 70px 55px; gap: 4px; padding: 6px 4px; border-bottom: 1px solid #222; align-items: center; font-size: 11px; }
+        .manual-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ccc; }
+        .manual-otp { font-size: 13px; font-weight: bold; color: #2ecc71; text-align: center; font-family: monospace; }
+        .btn-mini-copy { background-color: #333; border: 1px solid #555; color: #00ffcc; padding: 3px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        .btn-mini-otp { background-color: #27ae60; border: none; color: #fff; padding: 3px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        .status-msg { margin-top: 8px; padding: 8px; text-align: center; border-radius: 6px; font-size: 12px; background: #141416; color: #f1c40f; display: none; }
+
+        /* LUỒNG 2: SCAN ĐỒNG BỘ */
+        .section-scan { background-color: #1b2624; border: 1px solid #27ae60; padding: 12px; border-radius: 8px; }
+        .scan-title { color: #2ecc71; font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+        .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .btn-sheet { border: none; color: #fff; padding: 9px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .btn-down { background-color: #17a2b8; } .btn-up { background-color: #28a745; }
+        .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .date-picker, .kw-input { width: 100%; background-color: #141416; border: 1px solid #444; border-radius: 6px; color: #fff; padding: 8px; font-size: 13px; text-align: center; }
+        .btn-scan-trigger { width: 100%; background-color: #6f42c1; border: none; color: #fff; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; margin-bottom: 10px; }
+        
+        /* KHU VỰC THỐNG KÊ LỌC TAB 2 (ĐÃ THÊM Ô THIẾU) */
+        .summary-box { display: flex; justify-content: space-between; background: #141416; padding: 4px; border-radius: 6px; margin-bottom: 10px; font-size: 10px; font-weight: bold; gap: 4px; }
+        .sum-click-box { flex: 1; text-align: center; padding: 6px 1px; border-radius: 4px; cursor: pointer; transition: background 0.2s; border: 1px solid transparent; }
+        .sum-click-box:active { opacity: 0.7; }
+        .sum-total-box { background: #222; color: #aaa; border-color: #444; }
+        .sum-win-box { background: #132c1d; color: #2ecc71; border-color: #1e5a35; }
+        .sum-lose-box { background: #2c1a1a; color: #e74c3c; border-color: #5a2222; }
+        .sum-miss-box { background: #2a2015; color: #e67e22; border-color: #5a4022; } /* Ô thống kê thiếu */
+        .sum-click-box.active-filter { border: 2px solid #fff; box-shadow: 0 0 8px rgba(255,255,255,0.2); }
+
+        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid #323238; border-radius: 6px; }
+        .grid-row { display: grid; grid-template-columns: 35px 1fr 80px; padding: 8px; border-bottom: 1px solid #323238; font-size: 12px; align-items: center; background-color: #202024; }
+        .status-badge { text-align: center; padding: 3px 5px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+        .status-win { background-color: #2ecc71; color: #fff; } 
+        .status-lose { background-color: #e74c3c; color: #fff; } 
+        .status-miss { background-color: #e67e22; color: #fff; } /* Badge Thiếu */
+        .status-none { background-color: #444; color: #aaa; }
+        .debug-box { background: #2c2514; color: #f1c40f; padding: 8px; border-radius: 6px; font-size: 11px; max-height: 80px; overflow-y: auto; display: none; margin-top: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="title">⚡ iCloud Tool</div>
+        <button class="btn-config" id="btnToggleConfig">⚙️ API Config</button>
+    </div>
+
+    <div class="setup-box" id="setupSection" style="display: none;">
+        <label style="font-size: 11px; color: #aaa;">Link API Google Script (v7.1):</label>
+        <input type="text" id="apiUrlInput" class="input-style" placeholder="Dán link https://script.google.com/.../exec">
+        <button class="btn-save" id="btnSaveConfig">KÍCH HOẠT ĐỒNG BỘ</button>
+    </div>
+
+    <div id="mainDashboard" style="display: none;">
+        
+        <div class="tab-navigation">
+            <button class="tab-btn" onclick="switchTab('tab-otp-panel')">🔑 Luồng 1 (OTP)</button>
+            <button class="tab-btn active" onclick="switchTab('tab-scan-panel')">📊 Luồng 2 (Quét)</button>
+        </div>
+        
+        <div id="tab-otp-panel" class="tab-content">
+            <div class="section-otp">
+                <div class="section-title">🔑 Luồng 1: Copy Acc/Pass & Lấy OTP</div>
+                
+                <label style="font-size: 11px; color: #e67e22;">Chọn tài khoản iCloud cần login:</label>
+                <select id="otpEmailSelect" class="select-style">
+                    <option value="">-- Chưa tải danh sách từ Sheet --</option>
+                </select>
+
+                <div class="farm-copy-row">
+                    <div class="farm-text" id="lblCurrentEmail">Email: (Chưa chọn)</div>
+                    <button class="btn-copy" id="btnCopyEmail">COPY MAIL</button>
+                </div>
+
+                <div class="farm-copy-row">
+                    <div class="farm-text" id="lblCurrentPass">Pass: (Chưa chọn)</div>
+                    <button class="btn-copy" id="btnCopyPass">COPY PASS</button>
+                </div>
+
+                <label style="font-size: 11px; color: #aaa;">Hoặc nhập danh sách mail lẻ cần check (Mỗi dòng 1 mail):</label>
+                <textarea id="otpEmailInput" class="textarea-style" placeholder="easels.insurer.1b@icloud.com&#10;blitz_koala.2c@icloud.com" oninput="generateManualList()"></textarea>
+
+                <button class="btn-otp" id="btnGetOtp">🎯 LẤY OTP HÀNG LOẠT</button>
+                <div class="status-msg" id="statusMessage">Hệ thống sẵn sàng...</div>
+                <div class="manual-list-container" id="manualListArea" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div id="tab-scan-panel" class="tab-content active">
+            <div class="section-scan">
+                <div class="scan-title">📊 Luồng 2: Quét Hàng Loạt & Lưu Kết Quả</div>
+                
+                <div class="sheet-actions">
+                    <button class="btn-sheet btn-down" id="btnGetListSheet">📥 Tải danh sách từ Sheet</button>
+                    <button class="btn-sheet btn-up" id="btnSaveListSheet" disabled>📤 Lưu file</button>
+                </div>
+
+                <div class="filter-row">
+                    <div>
+                        <label style="font-size: 10px; color:#aaa;">Chọn ngày quét:</label>
+                        <input type="date" id="datePicker" class="date-picker" value="2026-06-12">
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; color:#aaa;">Từ khóa phụ:</label>
+                        <input type="text" id="keywordInput" class="kw-input" placeholder="Để trống">
+                    </div>
+                </div>
+
+                <button class="btn-scan-trigger" id="btnStartScan">🧹 QUÉT</button>
+
+                <div class="summary-box">
+                    <div class="sum-click-box sum-total-box active-filter" id="boxFilterAll" onclick="setTableFilter('ALL')">
+                        TỔNG:<br><span id="txtTotal">0</span>
+                    </div>
+                    <div class="sum-click-box sum-win-box" id="boxFilterWin" onclick="setTableFilter('TRÚNG')">
+                        TRÚNG:<br><span id="txtWin">0</span>
+                    </div>
+                    <div class="sum-click-box sum-lose-box" id="boxFilterLose" onclick="setTableFilter('TRƯỢT')">
+                        TRƯỢT:<br><span id="txtLose">0</span>
+                    </div>
+                    <div class="sum-click-box sum-miss-box" id="boxFilterMiss" onclick="setTableFilter('THIẾU')">
+                        THIẾU:<br><span id="txtMiss">0</span>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="grid-row grid-header">
+                        <div>STT</div>
+                        <div>Địa chỉ Email iCloud</div>
+                        <div style="text-align: center;">Trạng thái</div>
+                    </div>
+                    <div id="tableBody"></div>
+                </div>
+                <div class="debug-box" id="debugBox"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const setupSection = document.getElementById('setupSection');
+    const mainDashboard = document.getElementById('mainDashboard');
+    const apiUrlInput = document.getElementById('apiUrlInput');
+    const debugBox = document.getElementById('debugBox');
+    const btnSaveListSheet = document.getElementById('btnSaveListSheet');
+    const otpEmailSelect = document.getElementById('otpEmailSelect');
+    
+    let globalAccountData = []; 
+    let targetEmails = [];
+    let currentResultsMap = {};
+    let currentManualMails = [];
+    let activeFilterMode = "ALL"; 
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(content => { content.classList.remove('active'); });
+        document.querySelectorAll('.tab-btn').forEach(btn => { btn.classList.remove('active'); });
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    if(localStorage.getItem('saved_api_url')) {
+        apiUrlInput.value = localStorage.getItem('saved_api_url');
+        initMainInterface();
+    }
+
+    document.getElementById('btnSaveConfig').addEventListener('click', () => {
+        const url = apiUrlInput.value.trim();
+        if(!url) { alert('Vui lòng điền link API!'); return; }
+        localStorage.setItem('saved_api_url', url);
+        initMainInterface();
+    });
+
+    document.getElementById('btnToggleConfig').addEventListener('click', () => {
+        setupSection.style.display = setupSection.style.display === 'none' ? 'block' : 'none';
+    });
+
+    function initMainInterface() {
+        setupSection.style.display = 'none';
+        mainDashboard.style.display = 'block';
+        renderTable();
+    }
+
+    otpEmailSelect.addEventListener('change', () => {
+        const selectedEmail = otpEmailSelect.value;
+        if(!selectedEmail) {
+            document.getElementById('lblCurrentEmail').innerText = "Email: (Chưa chọn)";
+            document.getElementById('lblCurrentPass').innerText = "Pass: (Chưa chọn)";
+            return;
+        }
+        const found = globalAccountData.find(acc => acc.email === selectedEmail);
+        document.getElementById('lblCurrentEmail').innerText = "Email: " + selectedEmail;
+        document.getElementById('lblCurrentPass').innerText = "Pass: " + (found && found.password ? found.password : "Trống");
+    });
+
+    function copyText(text, btnElement, originalText) {
+        navigator.clipboard.writeText(text).then(() => {
+            btnElement.innerText = "OK ✓";
+            setTimeout(() => { btnElement.innerText = originalText; }, 1000);
+        });
+    }
+
+    document.getElementById('btnCopyEmail').addEventListener('click', () => {
+        if(!otpEmailSelect.value) return;
+        copyText(otpEmailSelect.value, document.getElementById('btnCopyEmail'), "COPY MAIL");
+    });
+
+    document.getElementById('btnCopyPass').addEventListener('click', () => {
+        if(!otpEmailSelect.value) return;
+        const found = globalAccountData.find(acc => acc.email === otpEmailSelect.value);
+        if(found && found.password) {
+            copyText(found.password, document.getElementById('btnCopyPass'), "COPY PASS");
+        }
+    });
+
+    function generateManualList() {
+        const text = document.getElementById('otpEmailInput').value.trim();
+        const container = document.getElementById('manualListArea');
+        if(!text) { container.style.display = "none"; currentManualMails = []; return; }
+        let mails = text.split('\n').map(e => e.trim().toLowerCase()).filter(e => e.length > 0);
+        currentManualMails = mails; container.innerHTML = ""; container.style.display = "block";
+        mails.forEach((email, idx) => {
+            const row = document.createElement('div'); row.className = "manual-row";
+            row.innerHTML = `
+                <div class="manual-email" title="${email}">${email}</div>
+                <div><button class="btn-mini-copy" onclick="copyText('${email}', this, 'MAIL')">MAIL</button></div>
+                <div class="manual-otp" id="otp-idx-${idx}">- - -</div>
+                <div><button class="btn-mini-otp" id="btn-otp-idx-${idx}" disabled onclick="copyManualOtp(${idx})">COPY</button></div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function copyManualOtp(idx) {
+        const otpText = document.getElementById(`otp-idx-${idx}`).innerText;
+        const btn = document.getElementById(`btn-otp-idx-${idx}`);
+        if(otpText && otpText !== "- - -") copyText(otpText, btn, "COPY");
+    }
+
+    document.getElementById('btnGetOtp').addEventListener('click', async () => {
+        const selectMail = otpEmailSelect.value;
+        const statusMsg = document.getElementById('statusMessage');
+        const btn = document.getElementById('btnGetOtp');
+        const googleApiUrl = localStorage.getItem('saved_api_url');
+        if (currentManualMails.length === 0 && !selectMail) { alert("Hãy chọn 1 mail từ dropdown HOẶC dán vào khung!"); return; }
+        btn.disabled = true; btn.innerText = "⏳ ĐANG XỬ LÝ...";
+        statusMsg.style.display = "block"; statusMsg.innerText = "🔍 Hệ thống bắt đầu quét hòm thư...";
+        if (currentManualMails.length === 0 && selectMail) {
+            document.getElementById('manualListArea').innerHTML = `
+                <div class="manual-row">
+                    <div class="manual-email" title="${selectMail}">${selectMail}</div>
+                    <div><button class="btn-mini-copy" onclick="copyText('${selectMail}', this, 'MAIL')">MAIL</button></div>
+                    <div class="manual-otp" id="otp-idx-0">- - -</div>
+                    <div><button class="btn-mini-otp" id="btn-otp-idx-0" disabled onclick="copyManualOtp(0)">COPY</button></div>
+                </div>`;
+            document.getElementById('manualListArea').style.display = "block";
+            currentManualMails = [selectMail];
+        }
+        for(let i = 0; i < currentManualMails.length; i++) {
+            let currentMail = currentManualMails[i];
+            statusMsg.innerText = `⏳ Quét (${i+1}/${currentManualMails.length}): ${currentMail}`;
+            const otpDisplayCell = document.getElementById(`otp-idx-${i}`);
+            const copyBtnCell = document.getElementById(`btn-otp-idx-${i}`);
+            if(otpDisplayCell) otpDisplayCell.innerText = "⏳...";
+            try {
+                let curTime = new Date().getTime();
+                let fullUrl = googleApiUrl + "?email=" + encodeURIComponent(currentMail) + "&time=" + curTime;
+                const res = await fetch(fullUrl); const text = await res.text();
+                let cleanOtp = text.trim();
+                if(otpDisplayCell) {
+                    otpDisplayCell.innerText = cleanOtp;
+                    if(/^\d+$/.test(cleanOtp)) copyBtnCell.disabled = false;
+                    else { otpDisplayCell.style.color = "#e67e22"; otpDisplayCell.style.fontSize = "10px"; }
+                }
+            } catch (err) { if(otpDisplayCell) { otpDisplayCell.innerText = "Lỗi mạng"; otpDisplayCell.style.color = "#e74c3c"; } }
+        }
+        statusMsg.innerText = "🎉 Hoàn thành quét danh sách!"; btn.disabled = false; btn.innerText = "🎯 LẤY OTP HÀNG LOẠT";
+    });
+
+    document.getElementById('btnGetListSheet').addEventListener('click', async () => {
+        const btn = document.getElementById('btnGetListSheet');
+        const googleApiUrl = localStorage.getItem('saved_api_url');
+        btn.innerText = "⏳ Đang nạp...";
+        try {
+            const res = await fetch(googleApiUrl + "?action=read_sheet");
+            globalAccountData = await res.json();
+            targetEmails = globalAccountData.map(acc => acc.email);
+            otpEmailSelect.innerHTML = '<option value="">-- Chọn tài khoản iCloud --</option>';
+            globalAccountData.forEach(acc => {
+                const opt = document.createElement('option'); opt.value = acc.email; opt.innerText = acc.email;
+                otpEmailSelect.appendChild(opt);
+            });
+            alert("Đã nạp thành công " + targetEmails.length + " tài khoản iCloud!");
+            activeFilterMode = "ALL"; updateFilterUI(); renderTable();
+        } catch (err) { alert("Lỗi cấu hình kết nối Sheets."); }
+        btn.innerText = "📥 Tải danh sách từ Sheet";
+    });
+
+    btnSaveListSheet.addEventListener('click', async () => {
+        if(Object.keys(currentResultsMap).length === 0) return;
+        const googleApiUrl = localStorage.getItem('saved_api_url');
+        btnSaveListSheet.innerText = "⏳ Đang ghi...";
+        try {
+            let fullUrl = googleApiUrl + "?action=write_sheet&results_map=" + encodeURIComponent(JSON.stringify(currentResultsMap));
+            const res = await fetch(fullUrl); const txt = await res.text();
+            if(txt === "SUCCESS") alert("🎉 Đã lưu đồng bộ kết quả lên Cột B của Sheet!");
+        } catch(err) {}
+        btnSaveListSheet.innerText = "📤 Lưu file";
+    });
+
+    function setTableFilter(mode) {
+        activeFilterMode = mode;
+        updateFilterUI();
+        renderTable(Object.keys(currentResultsMap).length > 0 ? currentResultsMap : null);
+    }
+
+    function updateFilterUI() {
+        document.getElementById('boxFilterAll').classList.remove('active-filter');
+        document.getElementById('boxFilterWin').classList.remove('active-filter');
+        document.getElementById('boxFilterLose').classList.remove('active-filter');
+        document.getElementById('boxFilterMiss').classList.remove('active-filter');
+
+        if(activeFilterMode === "ALL") document.getElementById('boxFilterAll').classList.add('active-filter');
+        if(activeFilterMode === "TRÚNG") document.getElementById('boxFilterWin').classList.add('active-filter');
+        if(activeFilterMode === "TRƯỢT") document.getElementById('boxFilterLose').classList.add('active-filter');
+        if(activeFilterMode === "THIẾU") document.getElementById('boxFilterMiss').classList.add('active-filter');
+    }
+
+    function renderTable(resultsMap = null) {
+        const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
+        let winCount = 0, loseCount = 0, missCount = 0;
+        let visibleIndex = 1;
+
+        targetEmails.forEach((email) => {
+            if(resultsMap && resultsMap[email]) {
+                if(resultsMap[email] === 'TRÚNG') winCount++;
+                else if(resultsMap[email] === 'THIẾU') missCount++;
+                else loseCount++;
+            }
+        });
+
+        document.getElementById('txtTotal').innerText = targetEmails.length;
+        document.getElementById('txtWin').innerText = winCount; 
+        document.getElementById('txtLose').innerText = loseCount;
+        document.getElementById('txtMiss').innerText = missCount;
+
+        targetEmails.forEach((email) => {
+            let status = 'CHỜ QUÉT';
+            if(resultsMap && resultsMap[email]) {
+                status = resultsMap[email];
+            }
+
+            if(activeFilterMode === "TRÚNG" && status !== "TRÚNG") return;
+            if(activeFilterMode === "TRƯỢT" && status !== "TRƯỢT") return;
+            if(activeFilterMode === "THIẾU" && status !== "THIẾU") return;
+
+            const row = document.createElement('div'); row.className = 'grid-row';
+            let statusHtml = `<div class="status-badge status-none">Chờ quét</div>`;
+            
+            if(status === 'TRÚNG') { 
+                statusHtml = `<div class="status-badge status-win">TRÚNG</div>`; 
+            } else if(status === 'TRƯỢT') { 
+                statusHtml = `<div class="status-badge status-lose">TRƯỢT</div>`; 
+            } else if(status === 'THIẾU') {
+                statusHtml = `<div class="status-badge status-miss">THIẾU</div>`;
+            }
+
+            row.innerHTML = `<div style="color: #888;">${visibleIndex++}</div><div style="word-break: break-all;">${email}</div><div>${statusHtml}</div>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    // TỐI ƯU LOGIC QUÉT TAB 2: PHÂN LOẠI TRÚNG / TRƯỢT / THIẾU DỨT ĐIỂM
+    document.getElementById('btnStartScan').addEventListener('click', async () => {
+        if(targetEmails.length === 0) { alert("Vui lòng tải danh sách từ Sheet trước!"); return;}
+        const button = document.getElementById('btnStartScan');
+        const googleApiUrl = localStorage.getItem('saved_api_url');
+        const dateVal = document.getElementById('datePicker').value;
+        const keywordVal = document.getElementById('keywordInput').value.trim().toLowerCase();
+
+        button.innerText = "⏳ ĐANG QUÉT..."; button.disabled = true;
+        debugBox.innerHTML = ''; debugBox.style.display = 'block';
+
+        try {
+            let fullUrl = googleApiUrl + "?scan_all_kq=true&filter_date=" + dateVal;
+            const res = await fetch(fullUrl); const data = await res.json();
+            
+            // Bước 1: Mặc định tất cả các mail trong danh sách ban đầu là trạng thái "THIẾU" (Tức là chưa tìm thấy thư nào)
+            currentResultsMap = {}; 
+            targetEmails.forEach(e => currentResultsMap[e] = 'THIẾU');
+
+            if (data && data.length > 0) {
+                data.forEach((mail, idx) => {
+                    let subject = mail.subject || ""; let body = mail.body || ""; let toHeader = mail.to || "";
+                    let rawSubjectLower = subject.toLowerCase(); let rawBodyLower = body.toLowerCase();
+                    let megaContent = (toHeader + " " + subject + " " + body).toLowerCase();
+                    debugBox.innerHTML += `🔹 Mail ${idx+1}: ${subject.substring(0,25)}...<br>`;
+
+                    targetEmails.forEach(targetEmail => {
+                        // Nếu trong hòm Gmail tổng có tồn tại thư chứa địa chỉ email iCloud này
+                        if (megaContent.indexOf(targetEmail) !== -1) {
+                            if (keywordVal !== "" && megaContent.indexOf(keywordVal) === -1) return; 
+                            
+                            // Bước 2: Hễ có thư về thì chuyển từ "THIẾU" sang "TRƯỢT" trước làm mặc định
+                            if (currentResultsMap[targetEmail] === 'THIẾU') {
+                                currentResultsMap[targetEmail] = 'TRƯỢT';
+                            }
+                            
+                            // Bước 3: Nếu tiêu đề hoặc nội dung chứa chữ 당선/当選 (Trúng tuyển) thì xác nhận "TRÚNG"
+                            if (rawSubjectLower.indexOf("当選") !== -1 || rawBodyLower.indexOf("当選") !== -1) {
+                                currentResultsMap[targetEmail] = 'TRÚNG';
+                            }
+                        }
+                    });
+                });
+            } else { debugBox.innerHTML = '⚠️ Không tìm thấy thư trong ngày này.'; }
+            
+            renderTable(currentResultsMap); 
+            btnSaveListSheet.disabled = false;
+        } catch (err) { debugBox.innerHTML = '❌ Lỗi kết nối API Server.'; }
+        button.innerHTML = "🧹 QUÉT"; button.disabled = false;
+    });
+</script>
+</body>
+</html>
